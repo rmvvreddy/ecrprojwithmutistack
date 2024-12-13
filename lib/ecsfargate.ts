@@ -11,6 +11,7 @@ import * as apigateway from 'aws-cdk-lib/aws-apigateway';
 import { DockerImageAsset, Platform } from 'aws-cdk-lib/aws-ecr-assets'
 import * as ssm from 'aws-cdk-lib/aws-ssm';
 import * as iam from 'aws-cdk-lib/aws-iam'
+import { config } from '../settings'
 
 
 interface EcsStackProps extends cdk.StackProps {
@@ -122,7 +123,7 @@ export class EcsStack extends cdk.Stack {
       vpc,
     
     });
-    rdsSecurityGroup.addIngressRule(ecsSecurityGroup, ec2.Port.tcp(3306), 'Allow traffic from ECS');
+    rdsSecurityGroup.addIngressRule(ecsSecurityGroup, ec2.Port.tcp(config.databasePort), 'Allow traffic from ECS');
 
    
     // Create an ECS Fargate service with Deployment Circuit Breaker
@@ -138,20 +139,20 @@ export class EcsStack extends cdk.Stack {
 
     // ECS port mapping to 3000
     container.addPortMappings({
-      containerPort: 3000,
+      containerPort: config.containerPort,
     });
 
     // Integrate ECS Service with ALB
     const listener = loadBalancer.addListener('Listener', {
-      port: 80,
+      port: config.httpPort,
       open: true,
     });
 
     listener.addTargets('ECS', {
-      port: 80,
+      port: config.httpPort,
       targets: [ecsService.loadBalancerTarget({
         containerName: 'web',
-        containerPort: 3000,
+        containerPort: config.containerPort,
       })],
       healthCheck: {
         path: "/",
